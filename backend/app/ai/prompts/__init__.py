@@ -1,0 +1,1 @@
+# CodeGuru AI Prompts package
