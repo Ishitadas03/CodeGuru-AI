@@ -1,0 +1,46 @@
+services:
+  # ─── Backend API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: codeguru-ai-backend
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: codeguru-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+      - key: CORS_ORIGINS
+        value: '["https://codeguru-ai.vercel.app","https://codeguru-ai-frontend.vercel.app"]'
+
+  # ─── PostgreSQL Database ────────────────────────────────────────────────────
+  - type: pgsql
+    name: codeguru-db
+    plan: free
+    database: codeguru
+    ipAllowList: []

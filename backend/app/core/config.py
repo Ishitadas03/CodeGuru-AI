@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://codeguru-ai.vercel.app",
+        "https://codeguru-ai-frontend.vercel.app",
     ]
 
     # --- PostgreSQL Database ---
@@ -70,6 +72,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "codeguru"
     POSTGRES_PORT: int = 5432
+    DATABASE_URL: Optional[str] = None
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
     # Connection pool
@@ -84,6 +87,15 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v:
             return v
         data = info.data
+        # Render provides DATABASE_URL (postgresql://...) - convert to async driver
+        database_url = data.get("DATABASE_URL")
+        if database_url:
+            if database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif database_url.startswith("postgresql://"):
+                database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return database_url
+        # Assemble from individual vars (local development)
         return (
             f"postgresql+asyncpg://{data.get('POSTGRES_USER')}:"
             f"{data.get('POSTGRES_PASSWORD')}@{data.get('POSTGRES_SERVER')}:"
