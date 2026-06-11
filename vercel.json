@@ -26,7 +26,6 @@
   },
   "experimentalServices": {
     "postgres": {
-      "plan": "postgres-300",
       "config": {
         "database": "codeguru"
       }
