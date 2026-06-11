@@ -1,37 +1,33 @@
 services:
-  # ─── Backend API ─────────────────────────────────────────────────────────────
+  # FastAPI Backend Web Service
   - type: web
-    name: codeguru-ai-backend
-    runtime: python
-    plan: free
-    region: oregon
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
+    name: codeguru-backend
+    env: python
+    buildCommand: cd backend && pip install -r pyproject.toml
+    startCommand: cd backend && alembic upgrade head || true && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: ENVIRONMENT
         value: production
-      - key: PYTHON_VERSION
-        value: "3.12"
+      - key: DATABASE_URL
+        sync: false # User will paste Supabase connection string here
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: codeguru-redis
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
       - key: GEMINI_API_KEY
-        sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
+        sync: false # User will provide Google Gemini API key
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PRO_PRICE_ID
         sync: false
-      - key: CORS_ORIGINS
-        value: '["https://codeguru-ai.vercel.app","https://codeguru-ai-frontend.vercel.app"]'
+
+  # Managed Redis Service for quota checking
+  - type: redis
+    name: codeguru-redis
+    ipAllowList: [] # Access restricted to internal services
+    plan: free
