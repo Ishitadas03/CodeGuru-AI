@@ -20,15 +20,5 @@
       "source": "/api/v1/:path*",
       "destination": "https://codeguru-ai-backend.onrender.com/api/v1/:path*"
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@api-url"
-  },
-  "experimentalServices": {
-    "postgres": {
-      "config": {
-        "database": "codeguru"
-      }
-    }
-  }
+  ]
 }
