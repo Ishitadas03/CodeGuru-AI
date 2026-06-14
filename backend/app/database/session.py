@@ -1,9 +1,9 @@
-# backend/app/database/session.py
 """Async SQLAlchemy engine and session configuration.
 
-Supports both PostgreSQL (production) and SQLite (development) with proper
-connection pool settings. The engine is configured with pool pre-ping for
-connection health validation.
+Configured for serverless deployments (Vercel):
+- Minimal connection pool (each invocation is stateless)
+- Connection recycling to avoid stale connections
+- No persistent pool across invocations
 """
 from __future__ import annotations
 
@@ -17,9 +17,13 @@ from app.core.config import settings
 logger = logging.getLogger("codeguru.database")
 
 # Determine engine kwargs based on the database driver.
-# SQLite (aiosqlite) does not support connection pooling parameters.
 _is_sqlite = settings.SQLALCHEMY_DATABASE_URI.startswith("sqlite")
 
+# Serverless-optimized pool settings:
+# - pool_size=1: each function invocation needs at most 1 connection
+# - max_overflow=0: don't allow burst connections (serverless = 1 concurrent req per instance)
+# - pool_pre_ping: validate connections before use (critical for serverless cold starts)
+# - pool_recycle=300: recycle connections every 5 min (Vercel functions live ~5 min)
 engine_kwargs: dict = {
     "echo": settings.DB_ECHO,
 }
@@ -27,10 +31,10 @@ engine_kwargs: dict = {
 if not _is_sqlite:
     engine_kwargs.update(
         {
-            "pool_size": settings.DB_POOL_SIZE,
-            "max_overflow": settings.DB_MAX_OVERFLOW,
-            "pool_pre_ping": settings.DB_POOL_PRE_PING,
-            "pool_recycle": 3600,  # Recycle connections after 1 hour
+            "pool_size": 1,
+            "max_overflow": 0,
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
         }
     )
 else:

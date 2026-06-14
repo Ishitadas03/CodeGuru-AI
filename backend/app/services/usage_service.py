@@ -5,7 +5,13 @@ import tiktoken
 from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from redis.asyncio import Redis
+
+try:
+    from redis.asyncio import Redis
+    _REDIS_AVAILABLE = True
+except ImportError:
+    _REDIS_AVAILABLE = False
+    Redis = None  # type: ignore[assignment,misc]
 
 from app.models.usage import AIUsageRecord
 from app.core.config import SubscriptionTier, settings

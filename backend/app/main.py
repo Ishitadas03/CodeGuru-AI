@@ -11,17 +11,17 @@ from app.api.v1.router import api_router
 from app.middleware.rate_limit import limiter
 from app.middleware.logging_middleware import LoggingMiddleware, logger
 from app.database.session import engine
-from app.database.base import Base
 import app.models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan event handler for FastAPI startup and shutdown operations."""
+    """Lifespan event handler for FastAPI startup and shutdown operations.
+
+    Note: Schema management is handled by Alembic migrations at deploy time,
+    not by create_all on startup (which is unsafe for production).
+    """
     logger.info("Initializing CodeGuru AI Application context...")
-    # Automatically initialize SQLite database tables on startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
     logger.info("Tearing down CodeGuru AI Application context...")
     await engine.dispose()

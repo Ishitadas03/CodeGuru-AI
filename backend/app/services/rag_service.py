@@ -55,7 +55,7 @@ class RAGService:
             num_chunks=len(chunks)
         )
         
-        # 5. Index chunks in ChromaDB
+        # 5. Index chunks in pgvector
         await self.vector_service.add_chunks(
             user_id=user_id,
             document_id=doc.id,
@@ -73,7 +73,7 @@ class RAGService:
         user_id: uuid.UUID,
         document_id: uuid.UUID
     ) -> bool:
-        """Delete document metadata and remove its indexed vectors from ChromaDB."""
+        """Delete document metadata and remove its indexed vectors from pgvector."""
         repo = RAGRepository(db)
         doc = await repo.get_document_by_id(document_id)
         if not doc or doc.user_id != user_id:
@@ -111,7 +111,7 @@ class RAGService:
         # 2. Embed the query
         query_embedding = self.embedding_service.embed_query(message_content)
 
-        # 3. Retrieve similar chunks from ChromaDB
+        # 3. Retrieve similar chunks from pgvector
         similar_chunks = await self.vector_service.query_similar_chunks(
             user_id=user_id,
             query_embedding=query_embedding,

@@ -5,20 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 
 
-import os
-
-
 @pytest.fixture(autouse=True)
-def mock_vector_db(tmp_path):
-    """Redirect SQLite vector store path to a temporary file during testing."""
-    test_db_dir = str(tmp_path / "vector_test")
-    with patch("app.services.vector_service.VectorService.__init__") as mock_init:
-        def new_init(self, persist_directory=test_db_dir, client=None):
-            self.persist_directory = os.path.abspath(persist_directory)
-            os.makedirs(self.persist_directory, exist_ok=True)
-            self.db_path = os.path.join(self.persist_directory, "vector_store.db")
-            self._init_db()
-        mock_init.side_effect = new_init
+def mock_vector_db():
+    """Mock VectorService to avoid requiring a live PostgreSQL connection in tests."""
+    with patch("app.services.vector_service.VectorService.__init__") as mock_init, \
+         patch("app.services.vector_service.VectorService.add_chunks", new_callable=AsyncMock) as mock_add, \
+         patch("app.services.vector_service.VectorService.query_similar_chunks", new_callable=AsyncMock) as mock_query, \
+         patch("app.services.vector_service.VectorService.delete_document_vectors", new_callable=AsyncMock) as mock_del:
+        mock_init.return_value = None
+        mock_query.return_value = []
         yield
 
 

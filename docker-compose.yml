@@ -55,25 +55,6 @@ services:
       redis:
         condition: service_healthy
 
-  celery:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: codeguru-celery
-    restart: always
-    command: celery -A app.main worker --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - POSTGRES_SERVER=postgres
-      - REDIS_HOST=redis
-      - SECRET_KEY=${SECRET_KEY:-DEV_SECRET_KEY_PLACEHOLDER_DO_NOT_USE_IN_PRODUCTION_1234567890}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   frontend:
     build:
       context: ./frontend

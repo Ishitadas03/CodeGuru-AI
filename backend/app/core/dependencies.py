@@ -10,9 +10,9 @@ All route handlers use these dependencies to enforce:
 from __future__ import annotations
 
 import uuid
+import logging
 from typing import AsyncGenerator
 
-import redis.asyncio as aioredis
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,15 +24,34 @@ from app.database.session import get_db
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
 
+logger = logging.getLogger("codeguru.dependencies")
+
+# Redis is optional — required only for quota tracking in production.
+# On Vercel, use Upstash Redis or disable quotas.
+try:
+    import redis.asyncio as aioredis
+    _REDIS_AVAILABLE = True
+except ImportError:
+    _REDIS_AVAILABLE = False
+    aioredis = None  # type: ignore[assignment]
+
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login",
 )
 
 
-async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
-    """Provide a Redis connection from the pool, closing it after use."""
+async def get_redis() -> AsyncGenerator:
+    """Provide a Redis connection if configured, otherwise yield None.
+
+    Gracefully degrades when Redis is unavailable (e.g. on Vercel without Upstash).
+    """
+    if not _REDIS_AVAILABLE or not settings.REDIS_URL:
+        logger.debug("Redis not configured — returning None")
+        yield None
+        return
+
     client = aioredis.from_url(
-        settings.REDIS_URL or "redis://localhost:6379/0",
+        settings.REDIS_URL,
         encoding="utf-8",
         decode_responses=True,
     )
@@ -135,7 +154,7 @@ class SubscriptionChecker:
 async def check_usage_quota(
     feature: str,
     current_user: User = Depends(get_current_user),
-    redis_client: aioredis.Redis = Depends(get_redis),
+    redis_client=None,
 ) -> User:
     """Check if the user has remaining quota for a specific feature.
 
@@ -144,6 +163,8 @@ async def check_usage_quota(
 
     Raises QuotaExceededError if the limit is reached.
     """
+    if redis_client is None:
+        return current_user  # No Redis — skip quota check
     import datetime
 
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -186,10 +207,9 @@ async def check_usage_quota(
     try:
         current_count_raw = await redis_client.get(counter_key)
         current_count = int(current_count_raw) if current_count_raw is not None else 0
-    except (aioredis.ConnectionError, aioredis.TimeoutError):
+    except Exception:
         # If Redis is unavailable, allow the request but log the issue
-        import logging
-        logging.getLogger("codeguru.quota").warning(
+        logger.warning(
             "Redis unavailable for quota check, allowing request for user=%s feature=%s",
             current_user.id,
             feature,
@@ -210,12 +230,15 @@ async def check_usage_quota(
 async def increment_usage(
     user_id: uuid.UUID,
     feature: str,
-    redis_client: aioredis.Redis,
+    redis_client,
 ) -> int:
     """Increment the usage counter for a user+feature and return the new count.
 
     Sets a TTL of 35 days on the counter key to auto-expire after the billing period.
     """
+    if redis_client is None:
+        return 0  # No Redis — skip increment
+
     import datetime
 
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -227,9 +250,8 @@ async def increment_usage(
         pipe.expire(counter_key, 35 * 24 * 3600)  # 35 days TTL
         results = await pipe.execute()
         return int(results[0])
-    except (aioredis.ConnectionError, aioredis.TimeoutError):
-        import logging
-        logging.getLogger("codeguru.quota").warning(
+    except Exception:
+        logger.warning(
             "Redis unavailable for usage increment, user=%s feature=%s",
             user_id,
             feature,

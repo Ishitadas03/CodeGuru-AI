@@ -3,6 +3,7 @@ fastapi==0.115.0
 uvicorn[standard]>=0.30.0
 pydantic==2.7.4
 pydantic-settings>=2.3.0
+mangum>=0.17.0
 
 # ─── Database ──────────────────────────────────────────────────────────────────
 sqlalchemy==2.0.31
@@ -19,8 +20,6 @@ python-multipart==0.0.9
 # ─── HTTP & Caching ───────────────────────────────────────────────────────────
 httpx>=0.27.0
 aiofiles>=23.2.1
-redis==5.0.4
-celery==5.4.0
 
 # ─── Rate Limiting & Logging ──────────────────────────────────────────────────
 slowapi>=0.1.9
@@ -36,8 +35,6 @@ langchain-community==0.2.0
 openai==1.30.0
 tiktoken==0.7.0
 ollama>=0.2.1
-chromadb==0.5.0
-sentence-transformers==3.0.0
 
 # ─── Code Analysis ────────────────────────────────────────────────────────────
 tree-sitter>=0.24.0

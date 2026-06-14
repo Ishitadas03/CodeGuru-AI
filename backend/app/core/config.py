@@ -75,9 +75,9 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
-    # Connection pool
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 40
+    # Connection pool (serverless-optimized defaults)
+    DB_POOL_SIZE: int = 1
+    DB_MAX_OVERFLOW: int = 0
     DB_POOL_PRE_PING: bool = True
     DB_ECHO: bool = False
 
@@ -121,29 +121,9 @@ class Settings(BaseSettings):
             return f"redis://:{password}@{host}:{port}/0"
         return f"redis://{host}:{port}/0"
 
-    # --- Celery ---
+    # --- Celery (disabled for Vercel — use Inngest/Trigger.dev for background tasks) ---
     CELERY_BROKER_URL: Optional[str] = None
     CELERY_RESULT_BACKEND: Optional[str] = None
-
-    @field_validator("CELERY_BROKER_URL", mode="before")
-    @classmethod
-    def assemble_celery_broker(cls, v: Optional[str], info: Any) -> str:
-        if isinstance(v, str) and v:
-            return v
-        data = info.data
-        host = data.get("REDIS_HOST", "localhost")
-        port = data.get("REDIS_PORT", 6379)
-        return f"redis://{host}:{port}/1"
-
-    @field_validator("CELERY_RESULT_BACKEND", mode="before")
-    @classmethod
-    def assemble_celery_backend(cls, v: Optional[str], info: Any) -> str:
-        if isinstance(v, str) and v:
-            return v
-        data = info.data
-        host = data.get("REDIS_HOST", "localhost")
-        port = data.get("REDIS_PORT", 6379)
-        return f"redis://{host}:{port}/2"
 
     # --- Google OAuth ---
     GOOGLE_CLIENT_ID: Optional[str] = None
